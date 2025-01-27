@@ -1,0 +1,121 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+			 xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+             x:Class="VideoCutMarker.MainPage">
+
+	<Grid>
+		<!-- 행 정의 -->
+		<Grid.RowDefinitions>
+			<RowDefinition Height="*" />
+			<!-- 동영상 플레이어를 위한 공간 -->
+			<RowDefinition Height="20" />
+			<RowDefinition Height="30" />
+			<RowDefinition Height="40" />
+			<!-- 아래 UI를 위한 공간, 100픽셀 고정 -->
+		</Grid.RowDefinitions>
+
+		<!-- 동영상 재생 영역 -->
+		<toolkit:MediaElement x:Name="mediaElement"
+                              Grid.Row="0"
+                              Aspect="AspectFit"
+                              HorizontalOptions="FillAndExpand"
+                              VerticalOptions="Center"
+                              Source="sample_video.mp4" />
+
+		<!-- 상하좌우 크롭 테두리 -->
+		<Grid>
+			<!-- 상단 크롭 테두리 -->
+			<Grid x:Name="topLineCover"  HeightRequest="20" VerticalOptions="Start" />
+			<!-- 터치 영역 확대 -->
+			<BoxView x:Name="topLine" Color="Red" HeightRequest="2" VerticalOptions="Start" />
+
+			<!-- 하단 크롭 테두리 -->
+			<Grid x:Name="bottomLineCover"   HeightRequest="20" VerticalOptions="End" />
+			<!-- 터치 영역 확대 -->
+			<BoxView x:Name="bottomLine" Color="Red" HeightRequest="2" VerticalOptions="End" />
+
+			<!-- 왼쪽 크롭 테두리 -->
+			<Grid x:Name="leftLineCover"   WidthRequest="20" HorizontalOptions="Start" 
+				  VerticalOptions="Center" HeightRequest="440"/>
+			<!-- 터치 영역 확대 -->
+			<BoxView x:Name="leftLine" Color="Red" WidthRequest="2" HorizontalOptions="Start" 
+					 VerticalOptions="Center" HeightRequest="440"/>
+
+			<!-- 오른쪽 크롭 테두리 -->
+			<Grid x:Name="rightLineCover"  WidthRequest="20" HorizontalOptions="End" 
+				  VerticalOptions="Center" HeightRequest="440"/>
+			<!-- 터치 영역 확대 -->
+			<BoxView x:Name="rightLine" Color="Red" WidthRequest="2" HorizontalOptions="End" 
+					 VerticalOptions="Center" HeightRequest="440"/>
+		</Grid>
+		<!-- 동영상 우측 상단에 투명 버튼 배치 -->
+		<StackLayout Orientation="Horizontal"
+                     Grid.Row="0"
+                     HorizontalOptions="End"
+                     VerticalOptions="Start"
+                     Padding="10"
+                     Opacity="0.6">
+			<!-- 투명도 설정 -->
+			
+			<Button x:Name="btnBestCut" Text="Fit" Clicked="CutBestSize" BackgroundColor="Transparent" TextColor="White" />
+			<Button x:Name="btnCut2" Text="1/2" Clicked="Cut2" BackgroundColor="Transparent" TextColor="White" />
+			<Button x:Name="btnCut3" Text="1/3" Clicked="Cut3" BackgroundColor="Transparent" TextColor="White" />
+			<Button x:Name="btnFixSize" Text="FixSize" Clicked="ToggleFixSize" BackgroundColor="Transparent" TextColor="White" />
+		</StackLayout>
+		<!-- 동영상 하단에 구간표시바 추가 -->
+		<Grid Grid.Row="1" x:Name="progressBar">
+			<!-- 재생바 영역 위에 마킹을 위한 오버레이 -->
+			<Grid x:Name="markingOverlay"
+				HeightRequest="15"
+				HorizontalOptions="FillAndExpand"
+				VerticalOptions="Center" 
+				BackgroundColor="Transparent" />
+			<Grid x:Name="barOverlay"
+				HeightRequest="15"
+				HorizontalOptions="FillAndExpand"
+				VerticalOptions="Center" 
+				BackgroundColor="Transparent" />
+				  
+		</Grid>
+		<!-- 마크 및 숫자 버튼들 -->
+		<HorizontalStackLayout Grid.Row="2" 
+                               HorizontalOptions="End"
+                               Spacing="10">
+			
+			<!-- 동적으로 생성되는 숫자 버튼 -->
+			<HorizontalStackLayout x:Name="buttonStack"
+                                   Spacing="5" />
+		</HorizontalStackLayout>
+
+		<!-- 하단에 파일 정보와 저장 버튼 -->
+		<StackLayout Grid.Row="3"
+                     Orientation="Horizontal"
+                     HorizontalOptions="FillAndExpand"
+                     Padding="10,0">
+			<!-- 화질 정보 -->
+			<Label x:Name="resolutionLabel"
+                   Text="화질: 1280x720"
+                   VerticalOptions="Center"
+                   HorizontalOptions="StartAndExpand"
+                   FontSize="16" />
+			<!-- Mark 버튼 -->
+			<Button x:Name="btnMark"
+			Text="Mark"
+			HeightRequest="30"
+			Padding ="0"
+			Margin="20"
+			Clicked="OnMarkClicked" />
+
+			<!-- 저장 버튼 -->
+			<Button x:Name="btnSave"
+                    Text="Save"
+                    VerticalOptions="Center"
+					HeightRequest="34"
+					Padding ="0"
+                    HorizontalOptions="End"
+                    Clicked="UpdateFileName" />
+		</StackLayout>
+	</Grid>
+
+</ContentPage>

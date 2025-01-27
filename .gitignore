@@ -1,0 +1,37 @@
+# Build results
+bin/
+obj/
+
+# User-specific files
+.vscode/
+.idea/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# DotNet specific
+*.vs/
+.vs/
+
+# Rider specific
+.idea/
+*.sln.iml
+
+# Generated files
+/Properties/launchSettings.json
+
+# Dependency directories
+packages/
+.nuget/
+*.nupkg
+
+# Logs and temporary files
+*.log
+*.tmp
+*.pid
+*.aps
+*.mdb
+
+# macOS specific
+.DS_Store
