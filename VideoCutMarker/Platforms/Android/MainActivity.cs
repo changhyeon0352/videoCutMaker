@@ -38,7 +38,7 @@ namespace VideoCutMarker
 			Manifest.Permission.ReadExternalStorage,
 			Manifest.Permission.WriteExternalStorage
 		};
-		protected override void OnCreate(Bundle savedInstanceState)
+		protected override void OnCreate(Bundle? savedInstanceState)
 		{
 			if (ContextCompat.CheckSelfPermission(this, Manifest.Permission.WriteExternalStorage) != Permission.Granted)
 			{
@@ -59,7 +59,7 @@ namespace VideoCutMarker
 			}
 			VerifyStoragePermissions();
 		}
-		protected override void OnNewIntent(Intent intent)
+		protected override void OnNewIntent(Intent? intent)
 		{
 			base.OnNewIntent(intent);
 
