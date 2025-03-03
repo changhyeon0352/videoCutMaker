@@ -419,7 +419,7 @@ namespace VideoCutMarker
 			leftLineCover.GestureRecognizers.Add(panGestureRecognizer);
 			rightLineCover.GestureRecognizers.Add(panGestureRecognizer);
 		}
-		private void UpdateFileName(object sender, EventArgs e)
+		private async void UpdateFileName(object sender, EventArgs e)
 		{
 			
 
@@ -459,10 +459,32 @@ namespace VideoCutMarker
 
 			// 파일 이름 변경 (기존 파일 이름을 새 파일 이름으로 변경)
 			try {
-				File.Move(currentFilePath, newFilePath);
+				//File.Move(currentFilePath, newFilePath);
+				bool success = false;
+#if ANDROID
+				// MainActivity의 SAF 메서드 호출
+				var mainActivity = Microsoft.Maui.ApplicationModel.Platform.CurrentActivity as MainActivity;
+				if (mainActivity != null)
+				{
+					success = await mainActivity.RenameFileUsingSaf(currentFilePath, newFileName);
+				}
+#endif
+				if (success)
+				{
+					// 경로 업데이트
+					currentFilePath = newFilePath;
+					UpdateCropLines();
+				}
+				else
+				{
+					// 실패 시 클립보드에 복사
+					await Clipboard.Default.SetTextAsync(newFileName);
+					await DisplayAlert("알림", "파일 이름을 변경할 수 없습니다. 이름이 클립보드에 복사되었습니다.", "확인");
+				}
 			}
-			catch
+			catch(Exception error)
 			{
+				Debug.WriteLine(error);
 				Clipboard.Default.SetTextAsync(newFileName);
 			}
 

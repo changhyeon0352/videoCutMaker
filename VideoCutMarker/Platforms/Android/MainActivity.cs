@@ -2,16 +2,12 @@
 using Android.App;
 using Android.Content;
 using Android.Content.PM;
-using Android.Database;
-using Android.Graphics;
-using Android.Media;
 using Android.OS;
 using Android.Provider;
-using Android.Views;
 using AndroidX.Core.App;
 using AndroidX.Core.Content;
+using AndroidX.DocumentFile.Provider;
 using Java.Nio.FileNio;
-using Microsoft.Maui.Controls.PlatformConfiguration;
 using System.Diagnostics;
 
 namespace VideoCutMarker
@@ -32,6 +28,10 @@ namespace VideoCutMarker
 	)]
 	public class MainActivity : MauiAppCompatActivity
 	{
+		private const int REQUEST_SAF_PERMISSION = 100;
+		private string _pendingOriginalPath;
+		private string _pendingNewFileName;
+		private TaskCompletionSource<bool> _renameTaskCompletionSource;
 		private const int REQUEST_EXTERNAL_STORAGE = 1;
 		private static readonly string[] PERMISSIONS_STORAGE =
 		{
@@ -162,6 +162,102 @@ namespace VideoCutMarker
 		{
 			MoveTaskToBack(true);
 		}
+
+		// 파일 이름 변경 메서드
+		public Task<bool> RenameFileUsingSaf(string originalPath, string newFileName)
+		{
+			_pendingOriginalPath = originalPath;
+			_pendingNewFileName = newFileName;
+			_renameTaskCompletionSource = new TaskCompletionSource<bool>();
+
+			// SD 카드 경로인지 확인
+			bool isRemovableStorage = !originalPath.Contains("/storage/emulated/");
+
+			if (isRemovableStorage)
+			{
+				// SD 카드 권한 요청
+				Intent intent = new Intent(Intent.ActionOpenDocumentTree);
+				StartActivityForResult(intent, REQUEST_SAF_PERMISSION);
+			}
+			else
+			{
+				// 일반 외부 저장소의 경우 파일 선택기로 특정 파일 권한 요청
+				Intent intent = new Intent(Intent.ActionOpenDocument);
+				intent.SetType("*/*");
+				intent.PutExtra(Intent.ExtraLocalOnly, true);
+				StartActivityForResult(intent, REQUEST_SAF_PERMISSION);
+			}
+
+			return _renameTaskCompletionSource.Task;
+		}
+
+		// 권한 요청 결과 처리
+		protected override void OnActivityResult(int requestCode, Result resultCode, Intent data)
+		{
+			base.OnActivityResult(requestCode, resultCode, data);
+
+			if (requestCode == REQUEST_SAF_PERMISSION && resultCode == Result.Ok && data != null)
+			{
+				Android.Net.Uri treeUri = data.Data;
+				if (treeUri != null)
+				{
+					try
+					{
+						// 영구 권한 획득
+						ContentResolver.TakePersistableUriPermission(treeUri,
+							ActivityFlags.GrantReadUriPermission | ActivityFlags.GrantWriteUriPermission);
+
+						// DocumentFile 생성
+						DocumentFile rootDoc = DocumentFile.FromTreeUri(this, treeUri);
+
+						// 파일 경로에서 디렉토리 구조 파싱
+						string relativePath = _pendingOriginalPath.Substring(_pendingOriginalPath.IndexOf('/', 9) + 1);
+						string[] pathSegments = relativePath.Split('/');
+
+						// 디렉토리 탐색
+						DocumentFile currentDoc = rootDoc;
+						for (int i = 0; i < pathSegments.Length - 1; i++)
+						{
+							DocumentFile nextDoc = currentDoc.FindFile(pathSegments[i]);
+							if (nextDoc == null || !nextDoc.IsDirectory)
+							{
+								_renameTaskCompletionSource.SetResult(false);
+								return;
+							}
+							currentDoc = nextDoc;
+						}
+
+						// 파일 찾기
+						DocumentFile fileDoc = currentDoc.FindFile(System.IO.Path.GetFileName(_pendingOriginalPath));
+						if (fileDoc != null && fileDoc.Exists())
+						{
+							// 파일 이름 변경
+							bool success = fileDoc.RenameTo(_pendingNewFileName);
+							_renameTaskCompletionSource.SetResult(success);
+						}
+						else
+						{
+							_renameTaskCompletionSource.SetResult(false);
+						}
+					}
+					catch (Exception ex)
+					{
+						Console.WriteLine($"SAF error: {ex.Message}");
+						_renameTaskCompletionSource.SetResult(false);
+					}
+				}
+				else
+				{
+					_renameTaskCompletionSource.SetResult(false);
+				}
+			}
+			else
+			{
+				_renameTaskCompletionSource.SetResult(false);
+			}
+		}
+
+
 
 
 	}

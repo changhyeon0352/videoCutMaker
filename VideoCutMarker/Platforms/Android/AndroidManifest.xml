@@ -8,4 +8,14 @@
 							 android:supportsRtl="true"></application>
 	<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
 	<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+	<!-- Android 10+ 특정 권한 -->
+	<uses-permission android:name="android.permission.ACCESS_MEDIA_LOCATION" />
+	<!-- 미디어 위치 접근 -->
+
+	<!-- Android 11+ 전체 파일 접근 권한 (사용 시 주의 필요) -->
+	<uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
+									 android:minSdkVersion="30"
+									 tools:ignore="ScopedStorage" />
+	<!-- 인터넷 권한 (SMB 연결에 필요) -->
+	<uses-permission android:name="android.permission.INTERNET" />
 </manifest>
