@@ -175,7 +175,14 @@ namespace VideoCutMarker
 
 			if (isRemovableStorage)
 			{
-				// SD 카드 권한 요청
+				// 이미 권한이 있는지 확인
+				if (HasSafPermissionFor(originalPath))
+				{
+					// 권한이 있으면 바로 이름 변경 시도
+					return RenameSafFile(originalPath, newFileName);
+				}
+
+				// 권한이 없으면 사용자에게 요청
 				Intent intent = new Intent(Intent.ActionOpenDocumentTree);
 				StartActivityForResult(intent, REQUEST_SAF_PERMISSION);
 			}
@@ -189,6 +196,141 @@ namespace VideoCutMarker
 			}
 
 			return _renameTaskCompletionSource.Task;
+		}
+
+
+		private bool HasSafPermissionFor(string path)
+		{
+			// 저장된 권한들 확인
+			IList<UriPermission> permissions = ContentResolver.PersistedUriPermissions;
+
+			foreach (UriPermission permission in permissions)
+			{
+				if (permission.Uri != null &&
+					permission.IsReadPermission &&
+					permission.IsWritePermission)
+				{
+					// 권한 Uri로부터 DocumentFile 생성
+					DocumentFile rootDoc = DocumentFile.FromTreeUri(this, permission.Uri);
+					if (rootDoc != null && rootDoc.Exists())
+					{
+						// 경로에서 파일 찾기 시도
+						if (TryFindFileInDocTree(rootDoc, path))
+						{
+							return true;
+						}
+					}
+				}
+			}
+
+			return false;
+		}
+
+		private bool TryFindFileInDocTree(DocumentFile rootDoc, string path)
+		{
+			try
+			{
+				// 파일 경로에서 상대 경로 추출
+				string storageId = path.Split('/')[2]; // 예: emulated 또는 SD 카드 ID
+				string relativePath = path;
+				int startIndex = path.IndexOf('/', path.IndexOf('/', path.IndexOf('/') + 1) + 1);
+				if (startIndex > 0)
+				{
+					relativePath = path.Substring(startIndex + 1);
+				}
+
+				string[] segments = relativePath.Split('/');
+				DocumentFile currentDoc = rootDoc;
+
+				// 디렉토리 탐색
+				for (int i = 0; i < segments.Length - 1; i++)
+				{
+					if (string.IsNullOrEmpty(segments[i])) continue;
+
+					DocumentFile nextDoc = currentDoc.FindFile(segments[i]);
+					if (nextDoc == null || !nextDoc.IsDirectory)
+					{
+						return false;
+					}
+					currentDoc = nextDoc;
+				}
+
+				// 파일 찾기
+				DocumentFile file = currentDoc.FindFile(System.IO.Path.GetFileName(path));
+				return file != null && file.Exists();
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine($"Error checking SAF permission: {ex.Message}");
+				return false;
+			}
+		}
+
+		private async Task<bool> RenameSafFile(string path, string newName)
+		{
+			try
+			{
+				// 저장된 권한들 확인
+				IList<UriPermission> permissions = ContentResolver.PersistedUriPermissions;
+
+				foreach (UriPermission permission in permissions)
+				{
+					if (permission.Uri != null &&
+						permission.IsReadPermission &&
+						permission.IsWritePermission)
+					{
+						// 권한 Uri로부터 DocumentFile 생성
+						DocumentFile rootDoc = DocumentFile.FromTreeUri(this, permission.Uri);
+						if (rootDoc != null && rootDoc.Exists())
+						{
+							// 파일 찾기
+							DocumentFile file = FindFileInDocTree(rootDoc, path);
+							if (file != null && file.Exists())
+							{
+								// 이름 변경
+								return file.RenameTo(System.IO.Path.GetFileName(newName));
+							}
+						}
+					}
+				}
+
+				return false;
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine($"Error renaming with SAF: {ex.Message}");
+				return false;
+			}
+		}
+
+		private DocumentFile FindFileInDocTree(DocumentFile rootDoc, string path)
+		{
+			// 파일 경로에서 상대 경로 추출
+			string relativePath = path;
+			int startIndex = path.IndexOf('/', path.IndexOf('/', path.IndexOf('/') + 1) + 1);
+			if (startIndex > 0)
+			{
+				relativePath = path.Substring(startIndex + 1);
+			}
+
+			string[] segments = relativePath.Split('/');
+			DocumentFile currentDoc = rootDoc;
+
+			// 디렉토리 탐색
+			for (int i = 0; i < segments.Length - 1; i++)
+			{
+				if (string.IsNullOrEmpty(segments[i])) continue;
+
+				DocumentFile nextDoc = currentDoc.FindFile(segments[i]);
+				if (nextDoc == null || !nextDoc.IsDirectory)
+				{
+					return null;
+				}
+				currentDoc = nextDoc;
+			}
+
+			// 파일 찾기
+			return currentDoc.FindFile(System.IO.Path.GetFileName(path));
 		}
 
 		// 권한 요청 결과 처리
