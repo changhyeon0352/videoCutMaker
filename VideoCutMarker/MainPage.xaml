@@ -101,11 +101,11 @@
                    FontSize="16" />
 			<!-- Mark 버튼 -->
 			<Button x:Name="btnMark"
-			Text="Mark"
-			HeightRequest="30"
-			Padding ="0"
-			Margin="20"
-			Clicked="OnMarkClicked" />
+				Text="Mark"
+				HeightRequest="30"
+				Padding ="0"
+				Margin="20"
+				Clicked="OnMarkClicked" />
 
 			<!-- 저장 버튼 -->
 			<Button x:Name="btnSave"
@@ -114,7 +114,17 @@
 					HeightRequest="34"
 					Padding ="0"
                     HorizontalOptions="End"
-                    Clicked="UpdateFileName" />
+					Margin="20"
+                    Clicked="Save" />
+			<!-- 저장 버튼2 -->
+			<Button x:Name="btnSaveAs"
+                    Text="SaveAs"
+                    VerticalOptions="Center"
+					HeightRequest="34"
+					Padding ="0"
+                    HorizontalOptions="End"
+                    Clicked="SaveAs" />
+			
 		</StackLayout>
 	</Grid>
 

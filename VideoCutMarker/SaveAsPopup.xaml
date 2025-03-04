@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="VideoCutMarker.SaveAsPopup"
+             BackgroundColor="#80000000">
+	<ContentPage.Content>
+		<Grid VerticalOptions="Center" HorizontalOptions="Center">
+			<Frame BackgroundColor="White" CornerRadius="10" Padding="20" Margin="20">
+				<StackLayout Spacing="15" MinimumWidthRequest="300">
+					<Label Text="파일 이름 변경" FontSize="18" FontAttributes="Bold" HorizontalTextAlignment="Center"/>
+					<Label Text="새 파일 이름을 입력하세요:" FontSize="14"/>
+					<Entry x:Name="FileNameEntry" FontSize="16" TextColor="Black"/>
+					<StackLayout Orientation="Horizontal" HorizontalOptions="EndAndExpand" Spacing="10">
+						<Button Text="취소" Clicked="OnCancelClicked" BackgroundColor="#E0E0E0" TextColor="Black"/>
+						<Button Text="저장" Clicked="OnSaveClicked" BackgroundColor="#007AFF"/>
+					</StackLayout>
+				</StackLayout>
+			</Frame>
+		</Grid>
+	</ContentPage.Content>
+</ContentPage>

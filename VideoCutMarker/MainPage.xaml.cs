@@ -419,13 +419,11 @@ namespace VideoCutMarker
 			leftLineCover.GestureRecognizers.Add(panGestureRecognizer);
 			rightLineCover.GestureRecognizers.Add(panGestureRecognizer);
 		}
-		private async void UpdateFileName(object sender, EventArgs e)
+		private async void UpdateFileName(string fileName)
 		{
-			
-
 			// 기존 파일 경로에서 디렉토리 가져오기
 			string directory = Path.GetDirectoryName(currentFilePath); // 비디오 파일의 실제 경로를 사용할 수 있어야 함
-			string fileName = Path.GetFileName(currentFilePath);
+			
 
 			var markTimesList = markTimesDic.OrderBy(x => x.Key).ToList();
 			StringBuilder sb = new();
@@ -459,16 +457,24 @@ namespace VideoCutMarker
 
 			// 파일 이름 변경 (기존 파일 이름을 새 파일 이름으로 변경)
 			try {
-				//File.Move(currentFilePath, newFilePath);
 				bool success = false;
-#if ANDROID
-				// MainActivity의 SAF 메서드 호출
-				var mainActivity = Microsoft.Maui.ApplicationModel.Platform.CurrentActivity as MainActivity;
-				if (mainActivity != null)
+				try
 				{
-					success = await mainActivity.RenameFileUsingSaf(currentFilePath, newFileName);
+					File.Move(currentFilePath, newFilePath);
+					success = true;
 				}
+				catch 
+				{
+#if ANDROID
+					// MainActivity의 SAF 메서드 호출
+					var mainActivity = Microsoft.Maui.ApplicationModel.Platform.CurrentActivity as MainActivity;
+					if (mainActivity != null)
+					{
+						success = await mainActivity.RenameFileUsingSaf(currentFilePath, newFileName);
+					}
 #endif
+				}
+
 				if (success)
 				{
 					// 경로 업데이트
@@ -492,6 +498,56 @@ namespace VideoCutMarker
 			mediaElement.Stop();
 			RequestMoveToBackground?.Invoke();
 		}
+
+		private async void Save(object sender, EventArgs e)
+		{
+			string fileName = Path.GetFileName(currentFilePath);
+			UpdateFileName(fileName);
+		}
+
+		private async void SaveAs(object sender, EventArgs e)
+		{
+			string fileName = Path.GetFileName(currentFilePath);
+			string result="";
+#if IOS
+
+			// 입력 필드를 포함한 다이얼로그 생성
+			 result = await DisplayPromptAsync(
+				"파일 이름 변경",
+				"새 파일 이름을 입력하세요:",
+				accept: "저장",
+				cancel: "취소",
+				initialValue: fileName,
+				maxLength: 100);
+			
+			// 사용자가 확인을 누르면
+			if (!string.IsNullOrEmpty(result))
+			{
+				// 새 이름으로 UpdateFileName 메서드 호출
+				UpdateFileName(result);
+			}
+#elif ANDROID
+
+			// 커스텀 팝업 생성 및 표시
+			var popup = new SaveAsPopup(fileName);
+			await Navigation.PushModalAsync(popup);
+
+			// 사용자 입력 대기
+			result = await popup.GetFileNameAsync();
+			
+#endif
+			result += ".mp4";
+			if (!string.IsNullOrEmpty(result))
+			{
+				// 기존 UpdateFileName 메서드에 맞게 호출 방식 조정
+				// 직접 파일명을 사용하는 오버로드가 있다면:
+				UpdateFileName(result);
+				// 또는 기존 메서드를 유지한다면:
+				// UpdateFileName(sender, e); // 내부에서 result 값을 사용하도록 수정 필요
+			}
+		}
+
+
 		private static string DecimalToBase36(int decimalNumberDouble)
 		{
 			int decimalNumber = (int)(decimalNumberDouble);
