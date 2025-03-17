@@ -35,6 +35,8 @@ namespace VideoCutMarker
 		private string currentFilePath;
 		public Action RequestMoveToBackground;
 		private bool isFixSize = false;
+		// 버튼과 이벤트 핸들러를 저장할 딕셔너리 추가 (클래스 멤버 변수로)
+		private Dictionary<Button, EventHandler> buttonClickHandlers = new Dictionary<Button, EventHandler>();
 
 		public MainPage()
 		{
@@ -68,12 +70,10 @@ namespace VideoCutMarker
 				markTimesDic.Clear();
 				markingOverlay.Children.Clear();
 				barOverlay.Children.Clear();
-				buttonStack.Clear();
 				double totalTime = mediaElement.Duration.TotalSeconds;
 				markTimesDic.Add(totalTime,(0,0,true));
 				// 마킹된 위치에 표시 추가
 				UpdateSegment();
-				
 			};
 
 			// 드래깅으로 테두리 이동
@@ -115,7 +115,7 @@ namespace VideoCutMarker
 		{
 			// 현재 마크된 시간과 색상 목록을 사용하여 마크 표시를 업데이트합니다.
 			int markCount = markingOverlay.Children.Count; // 기존 마크 표시 수
-			int btnCount = buttonStack.Children.Count; // 기존 버튼 수
+			int segmentCount = barOverlay.Children.Count; // 기존 세그먼트 수
 			var keys = new List<double>(markTimesDic.Keys);
 			var values = new List<(int,int,bool)>(markTimesDic.Values);
 			
@@ -187,61 +187,64 @@ namespace VideoCutMarker
 					}
 				};
 				markerGrid.GestureRecognizers.Add(moveGesture);
-				// 색으로 분할된 영역 표시 막대 생성
-				BoxView segment = null;
-				if (i >= markCount)
+
+				// BoxView 대신 Button으로 세그먼트 생성
+				Button segmentButton = null;
+				if (i >= segmentCount)
 				{
-					segment = new BoxView
+					segmentButton = new Button
 					{
-						HeightRequest = 4,
+						HeightRequest = 15,
 						VerticalOptions = LayoutOptions.Center,
-						HorizontalOptions = LayoutOptions.Start
+						HorizontalOptions = LayoutOptions.Start,
+						Padding = new Thickness(0),
+						BorderWidth = 0,
+						CornerRadius = 0, // 직사각형 버튼
+						Text = (i + 1).ToString(),
+						FontSize = 10,
+						FontAttributes = FontAttributes.Bold,
+						TextColor = Colors.White // 텍스트 색상
 					};
-					barOverlay.Children.Add(segment);
+					barOverlay.Children.Add(segmentButton);
 				}
 				else
 				{
-					segment = (BoxView)barOverlay.Children[i];
+					segmentButton = (Button)barOverlay.Children[i];
 				}
-				segment.Color = color;
-				segment.WidthRequest = progressBar.Width * (position - prePosition);
-				segment.Margin = new Thickness(progressBar.Width * prePosition, 0, 0, 0); // 시작 위치 지정
-				
 
-				// 세그먼트 버튼 업데이트
-				// 현재 세그먼트 버튼을 업데이트합니다.
-				Button button = null;
-				if ( i >= btnCount)
-				{
-					button = new Button
-					{
-						// 버튼 스타일 및 크기 설정
-						WidthRequest = 30,
-						HeightRequest = 30,
-						CornerRadius = 15, // 둥근 버튼을 만들기 위해
-						Padding = 0
-					};
-					buttonStack.Children.Add(button); // 버튼을 컨테이너에 추가
-					button.Clicked += (s, e) =>
-					{
-						ToggleSegmentButton(button, index);
-					};
-				}
-				else
-				{
-					button = (Button)buttonStack.Children[i];
-				}
-				button.Text = (i + 1).ToString();
-				button.BackgroundColor = color;
+				segmentButton.BackgroundColor = color;
+				segmentButton.WidthRequest = progressBar.Width * (position - prePosition);
+				segmentButton.Margin = new Thickness(progressBar.Width * prePosition, 0, 0, 0); // 시작 위치 지정
 
-				// 버튼 클릭 시 원하는 작업을 수행하는 이벤트 추가
-				
+				// 버튼 클릭 이벤트 추가
+				int capturedIndex = index; // 클로저를 위한 인덱스 캡처
+				// UpdateSegment() 메서드 내의 이벤트 핸들러 부분 수정
+				// 기존 이벤트 핸들러가 있으면 제거
+				if (buttonClickHandlers.ContainsKey(segmentButton))
+				{
+					segmentButton.Clicked -= buttonClickHandlers[segmentButton];
+					buttonClickHandlers.Remove(segmentButton);
+				}
+
+				// 새 이벤트 핸들러 생성
+				EventHandler clickHandler = (s, e) =>
+				{
+					ToggleSegmentButton((Button)s, capturedIndex);
+				};
+
+				// 새 이벤트 핸들러 등록
+				segmentButton.Clicked += clickHandler;
+				buttonClickHandlers[segmentButton] = clickHandler;
 			}
-			for (int i = markTimesDic.Count; i < btnCount; i++)
+			// 불필요한 마커와 세그먼트 버튼 제거
+			for (int i = markTimesDic.Count; i < markCount; i++)
 			{
-				markingOverlay.Children.RemoveAt(i);
-				barOverlay.Children.RemoveAt(i);
-				buttonStack.Children.RemoveAt(i);
+				markingOverlay.Children.RemoveAt(markTimesDic.Count);
+			}
+
+			for (int i = markTimesDic.Count; i < segmentCount; i++)
+			{
+				barOverlay.Children.RemoveAt(markTimesDic.Count);
 			}
 		}
 		private void ToggleSegmentButton(Button button, int index)
@@ -250,10 +253,18 @@ namespace VideoCutMarker
 			double markTime = keys[index];
 			markTimesDic[markTime] = (markTimesDic[markTime].Item1, markTimesDic[markTime].Item2, !markTimesDic[markTime].Item3);
 			// 버튼이 회색이라면 흰색으로 전환
-			UpdateSegment();
+			// 버튼 색상 업데이트
+			if (markTimesDic[markTime].Item3)
+			{
+				// 활성화 - 원래 색상으로 변경
+				button.BackgroundColor = segmentColors[index % segmentColors.Count];
+			}
+			else
+			{
+				// 비활성화 - 회색으로 변경
+				button.BackgroundColor = Colors.Grey;
+			}
 		}
-		private bool IsMarkerPressed = false;
-		private DateTime pressStartTime;
 
 		
 
