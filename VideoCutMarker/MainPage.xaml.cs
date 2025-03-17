@@ -118,8 +118,6 @@ namespace VideoCutMarker
 			int segmentCount = barOverlay.Children.Count; // 기존 세그먼트 수
 			var keys = new List<double>(markTimesDic.Keys);
 			var values = new List<(int,int,bool)>(markTimesDic.Values);
-			
-
 			for (int i = 0; i < markTimesDic.Count; i++)
 			{
 				int index = i;
@@ -141,7 +139,7 @@ namespace VideoCutMarker
 					var boxView = new BoxView
 					{
 						WidthRequest = 2,
-						Color = Colors.Red,
+						Color = color,
 						HeightRequest = 15,
 						VerticalOptions = LayoutOptions.Center,
 						HorizontalOptions = LayoutOptions.Center
@@ -161,7 +159,7 @@ namespace VideoCutMarker
 				{
 					markerGrid = (Grid)markingOverlay.Children[i];
 				}
-				markerGrid.Margin = new Thickness(progressBar.Width * position - 15, 0, 0, 0);// 마커 중앙에 맞춰 
+				markerGrid.Margin = new Thickness(progressBar.Width * prePosition - 15, 0, 0, 0);// 마커 중앙에 맞춰 
 
 				//제스쳐 재세팅
 				markerGrid.GestureRecognizers.Clear();
@@ -170,8 +168,10 @@ namespace VideoCutMarker
 					Command = new Command(() =>
 					{
 						// 짧은 터치 처리
-						mediaElement.SeekTo(TimeSpan.FromSeconds(time));
+						mediaElement.SeekTo(TimeSpan.FromSeconds(preTime));
 						mediaElement.Play();
+						// 이 마커 이후 구간의 크롭 정보 찾기
+						UpdateCropLinesForMarker(preTime);
 					})
 				};
 				markerGrid.GestureRecognizers.Add(tapGesture);
@@ -181,7 +181,7 @@ namespace VideoCutMarker
 					switch (e.StatusType)
 					{
 						case GestureStatus.Completed:
-							markTimesDic.Remove(time);
+							markTimesDic.Remove(preTime);
 							UpdateSegment();
 							break;
 					}
@@ -247,6 +247,55 @@ namespace VideoCutMarker
 				barOverlay.Children.RemoveAt(markTimesDic.Count);
 			}
 		}
+
+		// 마커 시간에 기반하여 크롭 라인 업데이트하는 새 메서드
+		private void UpdateCropLinesForMarker(double markerTime)
+		{
+			var sortedMarks = markTimesDic.OrderBy(x => x.Key).ToList();
+
+			// 현재 클릭한 마커가 몇 번째 마커인지 찾기
+			int currentMarkerIndex = -2;
+			if (markerTime < 0.01f)
+			{
+				currentMarkerIndex = -1; // 0초
+			}
+			else
+			{
+				for (int i = 0; i < sortedMarks.Count; i++)
+				{
+					if (Math.Abs(sortedMarks[i].Key - markerTime) < 0.01) // 부동소수점 비교를 위한 오차 허용
+					{
+						currentMarkerIndex = i;
+						break;
+					}
+				}
+			}
+			if (currentMarkerIndex >= -1)
+			{
+				// 이 마커 이후 구간의 크롭 정보를 가져와야 함
+				// 마지막 마커라면 다음 구간이 없으므로 현재 마커의 크롭 정보 사용
+				// 아니라면 다음 마커(구간의 끝)의 크롭 정보 사용
+				int cropInfoIndex = (currentMarkerIndex == sortedMarks.Count - 1) ?
+									currentMarkerIndex :
+									currentMarkerIndex + 1;
+
+				// 해당 마커의 크롭 정보 적용
+				startX = sortedMarks[cropInfoIndex].Value.Item1;
+				startY = sortedMarks[cropInfoIndex].Value.Item2;
+
+				// 필요한 경우 endX, endY도 업데이트 (고정 크기 모드인 경우)
+				if (isFixSize)
+				{
+					endX = startX + fixVideoWidth;
+					endY = startY + fixVideoHeight;
+				}
+
+				// 크롭 라인 업데이트
+				UpdateCropLines();
+			}
+		}
+
+
 		private void ToggleSegmentButton(Button button, int index)
 		{
 			List<double> keys = new List<double>(markTimesDic.Keys);

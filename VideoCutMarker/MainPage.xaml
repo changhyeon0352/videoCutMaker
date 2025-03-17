@@ -37,17 +37,17 @@
 
 			<!-- 왼쪽 크롭 테두리 -->
 			<Grid x:Name="leftLineCover"   WidthRequest="20" HorizontalOptions="Start" 
-				  VerticalOptions="Center" HeightRequest="440"/>
+				  VerticalOptions="CenterAndExpand" HeightRequest="440"/>
 			<!-- 터치 영역 확대 -->
 			<BoxView x:Name="leftLine" Color="Red" WidthRequest="2" HorizontalOptions="Start" 
-					 VerticalOptions="Center" HeightRequest="440"/>
+					 VerticalOptions="CenterAndExpand" HeightRequest="440"/>
 
 			<!-- 오른쪽 크롭 테두리 -->
 			<Grid x:Name="rightLineCover"  WidthRequest="20" HorizontalOptions="End" 
 				  VerticalOptions="Center" HeightRequest="440"/>
 			<!-- 터치 영역 확대 -->
 			<BoxView x:Name="rightLine" Color="Red" WidthRequest="2" HorizontalOptions="End" 
-					 VerticalOptions="Center" HeightRequest="440"/>
+				VerticalOptions="Center" HeightRequest="440"/>
 		</Grid>
 
 		<!-- 동영상 우측 상단에 투명 버튼 배치 -->
@@ -68,11 +68,12 @@
 		<Grid 
 			Grid.Row="0" x:Name="markingOverlay"
 			HorizontalOptions="FillAndExpand"
-			VerticalOptions="End" 
+			VerticalOptions="End"
+			Padding="5,0,5,0"
 			BackgroundColor="Transparent" />
 
 		<!-- 동영상 하단에 구간표시바 추가 -->
-		<Grid Grid.Row="1" x:Name="progressBar">
+		<Grid Grid.Row="1" x:Name="progressBar" Margin="5,0,5,0">
 			<!-- 구간 버튼 영역에 Grid.Row 속성 추가 -->
 			<Grid 
 				x:Name="barOverlay"
@@ -111,7 +112,7 @@
 				HeightRequest="30"
 				Padding ="0"
                 HorizontalOptions="End"
-				Margin="20"
+				Margin="2"
                 Clicked="Save" />
 			<!-- 저장 버튼2 -->
 			<Button 
