@@ -60,25 +60,35 @@ namespace VideoCutMarker
 				actualVideoWidth = videoWidth * scale;
 				horizontalOffset = (displayWidth - actualVideoWidth) / 2;
 				verticalOffset = (displayHeight - actualVideoHeight) / 2;
-				// 처음에 테두리를 기본적으로 중앙에 위치
-				startX = 0;
-				endX = videoWidth;
-				startY = 0;
-				endY = videoHeight;
+				
+				// 파일 이름 파싱 추가
+				if (string.IsNullOrEmpty(currentFilePath) == false)
+				{
+					if (!ParseFileNameAndUpdateMarkers(currentFilePath))
+					{
+						// 처음에 테두리를 기본적으로 중앙에 위치
+						startX = 0;
+						endX = videoWidth;
+						startY = 0;
+						endY = videoHeight;
 
-				UpdateCropLines();
-				markTimesDic.Clear();
-				markingOverlay.Children.Clear();
-				barOverlay.Children.Clear();
-				double totalTime = mediaElement.Duration.TotalSeconds;
-				markTimesDic.Add(totalTime,(0,0,true));
-				// 마킹된 위치에 표시 추가
-				UpdateSegment();
+						UpdateCropLines();
+						markTimesDic.Clear();
+						markingOverlay.Children.Clear();
+						barOverlay.Children.Clear();
+						double totalTime = mediaElement.Duration.TotalSeconds;
+						markTimesDic.Add(totalTime, (0, 0, true));
+						// 마킹된 위치에 표시 추가
+						UpdateSegment();
+					}
+				}
 			};
 
 			// 드래깅으로 테두리 이동
 			AddDragEventHandlers();
 		}
+
+
 		public void PauseVideo()
 		{
 			mediaElement.Pause();
@@ -660,6 +670,147 @@ namespace VideoCutMarker
 				btnFixSize.TextColor = Colors.White;
 			}
 		}
-	}
 
+		// 편집된 파일에서 마커 정보를 추출하는 함수, 성공 여부를 반환
+		private bool ParseFileNameAndUpdateMarkers(string filePath)
+		{
+			string fileName = Path.GetFileName(filePath);
+
+			// 기본 형식 검사: [로 시작하고 ]를 포함해야 함
+			if (!fileName.StartsWith("[") || !fileName.Contains("]"))
+				return false;
+
+			try
+			{
+				// 마커 정보 부분 추출
+				int endBracketIndex = fileName.IndexOf(']');
+				if (endBracketIndex <= 1) // 최소한 []안에 내용이 있어야 함
+					return false;
+
+				string markerInfo = fileName.Substring(1, endBracketIndex - 1);
+
+				// 해상도 정보 형식 검사: (w_h) 패턴 포함 여부
+				if (!markerInfo.Contains("(") || !markerInfo.Contains(")"))
+					return false;
+
+				int resolutionStartIndex = markerInfo.IndexOf('(');
+				int resolutionEndIndex = markerInfo.IndexOf(')');
+
+				if (resolutionStartIndex >= resolutionEndIndex || resolutionEndIndex - resolutionStartIndex <= 1)
+					return false;
+
+				string resolutionPart = markerInfo.Substring(resolutionStartIndex + 1, resolutionEndIndex - resolutionStartIndex - 1);
+				if (!resolutionPart.Contains("_"))
+					return false;
+
+				string[] dimensions = resolutionPart.Split('_');
+				if (dimensions.Length == 2)
+				{
+					// 화면 해상도 및 크롭 설정 처리 (필요한 경우)
+					if (int.TryParse(dimensions[0], out int width) &&
+						int.TryParse(dimensions[1], out int height))
+					{
+						fixVideoWidth = width;
+						fixVideoHeight = height;
+						isFixSize = true;
+					}
+				}
+
+				// 구간 정보 추출
+				string segments = markerInfo.Substring(resolutionEndIndex + 3); // '_' 다음부터
+				if (!segments.Contains("x") || !segments.Contains("y") || !segments.Contains("t"))
+					return false;
+
+				string[] segmentArray = segments.Split('_');
+
+				// markTimesDic 초기화
+				markTimesDic.Clear();
+
+				// 각 세그먼트 정보 파싱
+				double lastTime = 0;
+				bool hasValidSegment = false;
+
+				foreach (string segment in segmentArray)
+				{
+					if (segment.StartsWith("x") &&
+						segment.Contains("y") &&
+						segment.Contains("t") &&
+						segment.Contains("-"))
+					{
+						int yPos = segment.IndexOf('y');
+						int tPos = segment.IndexOf('t');
+						int dashPos = segment.IndexOf('-');
+
+						if (yPos > 1 && tPos > yPos && dashPos > tPos)
+						{
+							string xStr = segment.Substring(1, yPos - 1);
+							string yStr = segment.Substring(yPos + 1, tPos - yPos - 1);
+							string startTimeStr = segment.Substring(tPos + 1, dashPos - tPos - 1);
+							string endTimeStr = segment.Substring(dashPos + 1);
+
+							int startX = Base36ToDecimal(xStr);
+							int startY = Base36ToDecimal(yStr);
+							double startTime = Base36ToDecimal(startTimeStr) / 10.0;
+							double endTime = Base36ToDecimal(endTimeStr) / 10.0; // 10으로 나누어 초 단위로 변환
+
+							// markTimesDic에 추가 (끝 시간을 키로, 시작 위치를 값으로)
+							if (startTime > 0.1)
+								markTimesDic.TryAdd(startTime, (startX, 0, false));
+							markTimesDic.Add(endTime, (startX, startY, true));
+							lastTime = endTime;
+							hasValidSegment = true;
+						}
+					}
+				}
+
+				if (!hasValidSegment)
+					return false;
+
+				// 영상 끝까지의 구간도 추가
+				markTimesDic.TryAdd(mediaElement.Duration.TotalSeconds, (0, 0, true));
+
+				// 마커와 세그먼트 업데이트
+				UpdateSegment();
+				
+
+				// 첫 번째 구간의 크롭 설정으로 초기화
+				if (markTimesDic.Count > 0)
+				{
+					var firstSegment = markTimesDic.OrderBy(x => x.Key).FirstOrDefault();
+					startX = firstSegment.Value.Item1;
+					startY = firstSegment.Value.Item2;
+					endX = startX + fixVideoWidth;
+					endY = startY + fixVideoHeight;
+					UpdateCropLines();
+				}
+
+				return true;
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine($"파일 이름 파싱 오류: {ex.Message}");
+				return false;
+			}
+		}
+
+		// Base36 문자열을 10진수로 변환하는 메서드
+		private int Base36ToDecimal(string base36)
+		{
+			const string chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+			base36 = base36.ToUpper();
+
+			int result = 0;
+			for (int i = 0; i < base36.Length; i++)
+			{
+				char c = base36[i];
+				int digit = chars.IndexOf(c);
+				if (digit < 0)
+					throw new ArgumentException("Invalid Base36 character: " + c);
+
+				result = result * 36 + digit;
+			}
+
+			return result;
+		}
+	}
 }
