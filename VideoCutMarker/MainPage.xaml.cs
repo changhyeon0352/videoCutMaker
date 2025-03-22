@@ -171,7 +171,7 @@ namespace VideoCutMarker
 				}
 				markerGrid.Margin = new Thickness(progressBar.Width * prePosition - 15, 0, 0, 0);// 마커 중앙에 맞춰 
 
-				//제스쳐 재세팅
+				//마커 제스쳐 재세팅
 				markerGrid.GestureRecognizers.Clear();
 				var tapGesture = new TapGestureRecognizer
 				{
@@ -596,19 +596,21 @@ namespace VideoCutMarker
 				// 새 이름으로 UpdateFileName 메서드 호출
 				UpdateFileName(result);
 			}
+
 #elif ANDROID
 
 			// 커스텀 팝업 생성 및 표시
-			var popup = new SaveAsPopup(fileName);
+			var onlyName = fileName.Replace(".mp4","");
+			var popup = new SaveAsPopup(onlyName);
 			await Navigation.PushModalAsync(popup);
 
 			// 사용자 입력 대기
 			result = await popup.GetFileNameAsync();
 			
 #endif
-			result += ".mp4";
 			if (!string.IsNullOrEmpty(result))
 			{
+				result += ".mp4";
 				// 기존 UpdateFileName 메서드에 맞게 호출 방식 조정
 				// 직접 파일명을 사용하는 오버로드가 있다면:
 				UpdateFileName(result);
@@ -811,6 +813,53 @@ namespace VideoCutMarker
 			}
 
 			return result;
+		}
+
+		// MainPage 클래스에 아래 메서드 추가
+		private async void AutoCrop(object sender, EventArgs e)
+		{
+			try
+			{
+				// 로딩 표
+
+				// 현재 재생 위치 저장
+				var currentPosition = mediaElement.Position;
+
+				// 미디어 일시 정지
+				mediaElement.Pause();
+
+				// 자동 크롭 감지 실행
+				var detector = new AutoCropDetector();
+				var cropRect = await detector.DetectCropAreaAsync(mediaElement,currentFilePath);
+
+				// 감지된 영역으로 크롭 테두리 설정
+				startX = (int)cropRect.X;
+				startY = (int)cropRect.Y;
+				endX = startX + (int)cropRect.Width;
+				endY = startY + (int)cropRect.Height;
+
+				// 테두리 업데이트
+				UpdateCropLines();
+
+				// 고정 크기 모드 활성화
+				SetFixSize(true);
+
+				// 원래 위치로 돌아가기
+				mediaElement.SeekTo(currentPosition);
+				mediaElement.Play();
+
+				// 결과 알림
+				await DisplayAlert("자동 크롭", $"검은색 영역이 감지되었습니다.\n크롭 영역: top{videoHeight-endY} bottom {startY} left {startX}  right {videoWidth - endX}", "확인");
+			}
+			catch (Exception ex)
+			{
+				await DisplayAlert("오류", $"자동 크롭 감지 중 오류가 발생했습니다: {ex.Message}", "확인");
+			}
+			finally
+			{
+				// 버튼 상태 복원
+				btnAutoCrop.IsEnabled = true;
+			}
 		}
 	}
 }

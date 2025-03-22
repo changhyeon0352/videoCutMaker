@@ -59,6 +59,7 @@
             Opacity="0.6">
 			<!-- 투명도 설정 -->
 
+			<Button x:Name="btnAutoCrop" Text="Letterbox" Clicked="AutoCrop" BackgroundColor="Transparent" TextColor="White" />
 			<Button x:Name="btnBestCut" Text="Fit" Clicked="CutBestSize" BackgroundColor="Transparent" TextColor="White" />
 			<Button x:Name="btnCut2" Text="1/2" Clicked="Cut2" BackgroundColor="Transparent" TextColor="White" />
 			<Button x:Name="btnCut3" Text="1/3" Clicked="Cut3" BackgroundColor="Transparent" TextColor="White" />
