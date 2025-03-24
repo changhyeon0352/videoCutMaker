@@ -35,6 +35,7 @@ namespace VideoCutMarker
 		private string currentFilePath;
 		public Action RequestMoveToBackground;
 		private bool isFixSize = false;
+		private Spin spin;
 		// 버튼과 이벤트 핸들러를 저장할 딕셔너리 추가 (클래스 멤버 변수로)
 		private Dictionary<Button, EventHandler> buttonClickHandlers = new Dictionary<Button, EventHandler>();
 
@@ -497,8 +498,12 @@ namespace VideoCutMarker
 
 			var markTimesList = markTimesDic.OrderBy(x => x.Key).ToList();
 			StringBuilder sb = new();
-			sb.Append($"[({(int)(endX - startX)}_{(int)(endY - startY)})_");
-			
+			sb.Append("[");
+			if (spin == Spin.CCW)
+				sb.Append("(ccw)");
+			else if (spin == Spin.CW)
+				sb.Append("(cw)");
+			sb.Append($"({(int)(endX - startX)}_{(int)(endY - startY)})_");
 			for (int i = 0; i < markTimesList.Count; i++)
 			{
 				if (!markTimesList[i].Value.Item3)
@@ -691,6 +696,19 @@ namespace VideoCutMarker
 
 				string markerInfo = fileName.Substring(1, endBracketIndex - 1);
 
+				// 회전 처리
+				if (markerInfo.Contains("(ccw)"))
+				{
+					spin = Spin.CCW;
+					markerInfo.Replace("(ccw)", "");
+
+				}
+				else if (markerInfo.Contains("(cw)"))
+				{
+					spin = Spin.CW;
+					markerInfo.Replace("(cw)", "");
+				}
+					
 				// 해상도 정보 형식 검사: (w_h) 패턴 포함 여부
 				if (!markerInfo.Contains("(") || !markerInfo.Contains(")"))
 					return false;
@@ -861,5 +879,27 @@ namespace VideoCutMarker
 				btnAutoCrop.IsEnabled = true;
 			}
 		}
+		
+		// spin 피커(드롭다운)처리
+		private void OnPickerSelectedIndexChanged(object sender, EventArgs e)
+		{
+			var picker = (Picker)sender;
+			int selectedIndex = picker.SelectedIndex;
+
+			if (selectedIndex != -1)
+			{
+				spin = (Spin)picker.SelectedIndex;
+			}
+			else
+			{
+				spin = Spin.None;
+			}
+		}
+	}
+	public enum Spin
+	{
+		None,
+		CW,
+		CCW
 	}
 }

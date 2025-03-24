@@ -58,7 +58,17 @@
             Padding="10"
             Opacity="0.6">
 			<!-- 투명도 설정 -->
-
+			<Picker x:Name="myPicker"
+				Title="회전"
+				SelectedIndexChanged="OnPickerSelectedIndexChanged">
+				<Picker.ItemsSource>
+					<x:Array Type="{x:Type x:String}">
+						<x:String>spin_X</x:String>
+						<x:String>spin_cw</x:String>
+						<x:String>spin_ccw</x:String>
+					</x:Array>
+				</Picker.ItemsSource>
+			</Picker>
 			<Button x:Name="btnAutoCrop" Text="Letterbox" Clicked="AutoCrop" BackgroundColor="Transparent" TextColor="White" />
 			<Button x:Name="btnBestCut" Text="Fit" Clicked="CutBestSize" BackgroundColor="Transparent" TextColor="White" />
 			<Button x:Name="btnCut2" Text="1/2" Clicked="Cut2" BackgroundColor="Transparent" TextColor="White" />
