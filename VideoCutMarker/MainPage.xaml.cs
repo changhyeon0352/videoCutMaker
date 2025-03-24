@@ -47,6 +47,7 @@ namespace VideoCutMarker
 			mediaElement.MediaOpened += async (s, e) =>
 			{
 				await Task.Delay(1000);
+				spin = Spin.None;
 				if((int)mediaElement.MediaWidth < 1)
 				{
 					await Task.Delay(1000);
