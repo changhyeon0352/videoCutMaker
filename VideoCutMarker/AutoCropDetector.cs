@@ -98,9 +98,10 @@ namespace VideoCutMarker
 
 			// 중앙값 계산
 			int medianLeft = GetMedian(lefts);
+			int medianBottom = GetMedian(bottoms);
 			int medianTop = GetMedian(tops);
 			int medianRight = GetMedian(rights);
-			int medianBottom = GetMedian(bottoms);
+			
 
 			// 결과가 유효한지 확인
 			if (medianRight <= medianLeft || medianBottom >= medianTop)
@@ -114,9 +115,9 @@ namespace VideoCutMarker
 
 			return new Rect(
 				medianLeft,
-				medianTop,
+				medianBottom,
 				medianRight - medianLeft,
-				medianBottom - medianTop
+				medianTop - medianBottom
 			);
 		}
 
