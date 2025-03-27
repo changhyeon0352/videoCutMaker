@@ -12,7 +12,7 @@ namespace VideoCutMarker.Platforms.AndroidModule
 	public class VideoFrameCapture
 	{
 		private const string TAG = "VideoFrameCapture";
-		private const int BRIGHTNESS_THRESHOLD = 10;
+		private const int BRIGHTNESS_THRESHOLD = 50;
 
 		/// <summary>
 		/// 검은색 테두리를 제외한 비디오 콘텐츠의 경계를 감지합니다.

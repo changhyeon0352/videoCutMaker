@@ -35,7 +35,7 @@ namespace VideoCutMarker
 		private string currentFilePath;
 		public Action RequestMoveToBackground;
 		private bool isFixSize = false;
-		private Spin spin;
+		private Rotation rotation;
 		// 버튼과 이벤트 핸들러를 저장할 딕셔너리 추가 (클래스 멤버 변수로)
 		private Dictionary<Button, EventHandler> buttonClickHandlers = new Dictionary<Button, EventHandler>();
 
@@ -43,11 +43,12 @@ namespace VideoCutMarker
 		{
 
 			InitializeComponent();
+			myPicker.SelectedIndex = 0;
+			rotation = VideoCutMarker.Rotation.None;
 			// 동영상 크기 설정 및 crop 테두리 설정
 			mediaElement.MediaOpened += async (s, e) =>
 			{
 				await Task.Delay(1000);
-				spin = Spin.None;
 				if((int)mediaElement.MediaWidth < 1)
 				{
 					await Task.Delay(1000);
@@ -84,10 +85,12 @@ namespace VideoCutMarker
 						UpdateSegment();
 					}
 				}
+				
 			};
 
 			// 드래깅으로 테두리 이동
 			AddDragEventHandlers();
+
 		}
 
 
@@ -500,10 +503,11 @@ namespace VideoCutMarker
 			var markTimesList = markTimesDic.OrderBy(x => x.Key).ToList();
 			StringBuilder sb = new();
 			sb.Append("[");
-			if (spin == Spin.CCW)
-				sb.Append("(ccw)");
-			else if (spin == Spin.CW)
-				sb.Append("(cw)");
+			if (rotation != VideoCutMarker.Rotation.None)
+			{
+				sb.Append($"({rotation.ToString()})");
+			}
+
 			sb.Append($"({(int)(endX - startX)}_{(int)(endY - startY)})_");
 			for (int i = 0; i < markTimesList.Count; i++)
 			{
@@ -698,16 +702,15 @@ namespace VideoCutMarker
 				string markerInfo = fileName.Substring(1, endBracketIndex - 1);
 
 				// 회전 처리
-				if (markerInfo.Contains("(ccw)"))
+				if (markerInfo.Contains("(CW"))
 				{
-					spin = Spin.CCW;
-					markerInfo.Replace("(ccw)", "");
+					var rotationStartIdx = markerInfo.IndexOf("(");
+					var RotationEndIdx = markerInfo.IndexOf(")");
+					string rotateStr = markerInfo.Substring(rotationStartIdx + 1, RotationEndIdx -1);
 
-				}
-				else if (markerInfo.Contains("(cw)"))
-				{
-					spin = Spin.CW;
-					markerInfo.Replace("(cw)", "");
+					rotation = (Rotation)Enum.Parse(typeof(Rotation), rotateStr, true); // true: 대소문자 무시;
+					myPicker.SelectedIndex = (int)rotation;
+					markerInfo = markerInfo.Replace($"({rotateStr})", "");
 				}
 					
 				// 해상도 정보 형식 검사: (w_h) 패턴 포함 여부
@@ -889,18 +892,19 @@ namespace VideoCutMarker
 
 			if (selectedIndex != -1)
 			{
-				spin = (Spin)picker.SelectedIndex;
+				rotation = (Rotation)picker.SelectedIndex;
 			}
 			else
 			{
-				spin = Spin.None;
+				rotation = VideoCutMarker.Rotation.None;
 			}
 		}
 	}
-	public enum Spin
+	public enum Rotation
 	{
-		None,
-		CW,
-		CCW
+		None = 0,    // 0° 회전
+		CW90 = 1,    // 90° 시계 방향
+		CW180 = 2,   // 180° 회전
+		CW270 = 3    // 270° 시계 방향 (또는 90° 반시계 방향)
 	}
 }

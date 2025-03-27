@@ -135,12 +135,12 @@ namespace VideoCutMarker
 				// Cursor가 null이 아니고, 첫 번째 행으로 이동할 수 있는지 확인
 				if (cursor != null && cursor.MoveToFirst())
 				{
-					int column_index = cursor.GetColumnIndexOrThrow(MediaStore.Video.Media.InterfaceConsts.Data); // "_data"의 인덱스 찾기
-					int column_index1 = cursor.GetColumnIndexOrThrow(MediaStore.Video.Media.InterfaceConsts.Id); // "_data"의 인덱스 찾기
-					int column_index2 = cursor.GetColumnIndexOrThrow(MediaStore.Video.Media.InterfaceConsts.DisplayName); // "_data"의 인덱스 찾기
+					int column_index = cursor.GetColumnIndexOrThrow(MediaStore.Video.Media.InterfaceConsts.Data);
+					//int column_index1 = cursor.GetColumnIndexOrThrow(MediaStore.Video.Media.InterfaceConsts.Id); 
+					int column_index2 = cursor.GetColumnIndexOrThrow(MediaStore.Video.Media.InterfaceConsts.DisplayName); 
 					string filePath = cursor.GetString(column_index); // 파일 경로 가져오기
-					string fileId = cursor.GetString(column_index1); // 파일 경로 가져오기
-					string fileName = cursor.GetString(column_index2); // 파일 경로 가져오기
+					//string fileId = cursor.GetString(column_index1);
+					string fileName = cursor.GetString(column_index2);
 
 					if (!string.IsNullOrEmpty(filePath)) // 경로가 null이나 비어있지 않은지 확인
 					{

@@ -20,8 +20,15 @@ namespace VideoCutMarker
 #if DEBUG
 			builder.Logging.AddDebug();
 #endif
+			builder.ConfigureMauiHandlers(cf => {
+#if ANDROID
+				cf.AddHandler(typeof(Picker), typeof(Platforms.AndroidModule.PickerHandlerFixAndroidFocus));
+#endif
+			});
 
 			return builder.Build();
 		}
+
+
 	}
 }
