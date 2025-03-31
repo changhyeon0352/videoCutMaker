@@ -120,7 +120,7 @@ namespace VideoCutMarker
 		{
 			// 현재 재생 시간을 마킹
 			double currentTime = mediaElement.Position.TotalSeconds;
-			markTimesDic.Add(currentTime, (startX,startY, true));
+			markTimesDic.TryAdd(currentTime, (startX,startY, true));
 
 			// 마킹된 위치에 표시 추가
 			UpdateSegment();
@@ -128,18 +128,80 @@ namespace VideoCutMarker
 
 		private void UpdateSegment()
 		{
+			int markerButtonWidth = 10;
+			int markerButtonHeight = 15;
 			// 현재 마크된 시간과 색상 목록을 사용하여 마크 표시를 업데이트합니다.
 			int markCount = markingOverlay.Children.Count; // 기존 마크 표시 수
 			int segmentCount = barOverlay.Children.Count; // 기존 세그먼트 수
 			var keys = new List<double>(markTimesDic.Keys);
-			var values = new List<(int,int,bool)>(markTimesDic.Values);
+			var values = new List<(int, int, bool)>(markTimesDic.Values);
+
+			// 마커 위치 사전 계산 (X축 위치)
+			List<double> markerPositions = new List<double>();
+			for (int i = 0; i < markTimesDic.Count; i++)
+			{
+				double preTime = 0;
+				if (i != 0)
+				{
+					preTime = keys[i - 1];
+				}
+				double position = preTime / mediaElement.Duration.TotalSeconds;
+				markerPositions.Add(progressBar.Width * position);
+			}
+
+			// 마커 고도(층) 계산 - 2D 공간 고려
+			Dictionary<int, int> markerVerticalOffsets = new Dictionary<int, int>();
+			Dictionary<int, (double xStart, double xEnd)> markerBounds = new Dictionary<int, (double, double)>();
+
+			for (int i = 0; i < markerPositions.Count; i++)
+			{
+				markerVerticalOffsets[i] = 0; // 시작은 바닥 레벨(0)
+				double xPos = markerPositions[i];
+
+				// 각 레벨별로 마커 배치 가능 여부 확인
+				bool foundLevel = false;
+				for (int level = 0; level <= markTimesDic.Count; level++) // 최대 마커 수 만큼 층이 필요할 수 있음
+				{
+					bool levelIsFree = true;
+
+					// 이 레벨에 있는 다른 마커들과 확인
+					foreach (var entry in markerBounds)
+					{
+						int otherIndex = entry.Key;
+						var bounds = entry.Value;
+
+						// 같은 레벨에 있는 마커인지 확인
+						if (markerVerticalOffsets[otherIndex] == level)
+						{
+							// X축에서 충돌하는지 확인
+							if (Math.Abs(xPos - bounds.xStart) < markerButtonWidth * 1.5)
+							{
+								levelIsFree = false;
+								break;
+							}
+						}
+					}
+
+					if (levelIsFree)
+					{
+						markerVerticalOffsets[i] = level;
+						foundLevel = true;
+						break;
+					}
+				}
+
+				// 마커의 경계 저장 (클릭 영역 고려)
+				markerBounds[i] = (xPos - markerButtonWidth/2, xPos + markerButtonWidth/2); // 30 픽셀 너비의 클릭 영역
+			}
+
+			// 마커 및 세그먼트 UI 업데이트
 			for (int i = 0; i < markTimesDic.Count; i++)
 			{
 				int index = i;
 				double preTime = 0;
-				if(i != 0)
+				if (i != 0)
 				{
-					preTime = keys[i -1];
+					preTime = keys[i - 1];
 				}
 				double time = keys[i];
 
@@ -149,23 +211,26 @@ namespace VideoCutMarker
 				double position = time / mediaElement.Duration.TotalSeconds;
 				double prePosition = preTime / mediaElement.Duration.TotalSeconds;
 				Grid markerGrid = null;
-				if ( i >= markCount)
+				if (i >= markCount)
 				{
 					var boxView = new BoxView
 					{
 						WidthRequest = 2,
 						Color = color,
-						HeightRequest = 15,
+						HeightRequest = markerButtonHeight,
 						VerticalOptions = LayoutOptions.Center,
 						HorizontalOptions = LayoutOptions.Center
 					};
 					markerGrid = new Grid
 					{
-						WidthRequest = 30, // 클릭 영역을 더 넓게 설정
-						HeightRequest = 30,
+						WidthRequest = markerButtonWidth, // 클릭 영역을 더 넓게 설정
+						HeightRequest = markerButtonHeight,
 						BackgroundColor = Colors.Transparent, // 투명한 색상
-						VerticalOptions = LayoutOptions.Center,
-						HorizontalOptions = LayoutOptions.Start
+						HorizontalOptions = LayoutOptions.Start,
+						VerticalOptions = LayoutOptions.End,
+						ZIndex = 1000, // 높은 ZIndex 설정으로 다른 요소보다 우선시되도록 함
+						InputTransparent = false // 입력 이벤트를 투명하게 처리하지 않음
+						
 					};
 					markerGrid.Children.Add(boxView);
 					markingOverlay.Children.Add(markerGrid);
@@ -174,7 +239,16 @@ namespace VideoCutMarker
 				{
 					markerGrid = (Grid)markingOverlay.Children[i];
 				}
-				markerGrid.Margin = new Thickness(progressBar.Width * prePosition - 15, 0, 0, 0);// 마커 중앙에 맞춰 
+
+				// 수직 위치 오프셋 적용 (최대 높이 제한)
+				int verticalOffset = markerVerticalOffsets[i];
+				//좌,상,우,하
+				markerGrid.Margin = new Thickness(
+					progressBar.Width * prePosition - markerButtonWidth/2, // X 위치
+					0,
+					0,
+					markerButtonHeight * verticalOffset // Y 위치 (위로 올림)
+				);
 
 				//마커 제스쳐 재세팅
 				markerGrid.GestureRecognizers.Clear();
@@ -233,8 +307,8 @@ namespace VideoCutMarker
 
 				// 버튼 클릭 이벤트 추가
 				int capturedIndex = index; // 클로저를 위한 인덱스 캡처
-				// UpdateSegment() 메서드 내의 이벤트 핸들러 부분 수정
-				// 기존 이벤트 핸들러가 있으면 제거
+										   // UpdateSegment() 메서드 내의 이벤트 핸들러 부분 수정
+										   // 기존 이벤트 핸들러가 있으면 제거
 				if (buttonClickHandlers.ContainsKey(segmentButton))
 				{
 					segmentButton.Clicked -= buttonClickHandlers[segmentButton];
@@ -262,7 +336,6 @@ namespace VideoCutMarker
 				barOverlay.Children.RemoveAt(markTimesDic.Count);
 			}
 		}
-
 		// 마커 시간에 기반하여 크롭 라인 업데이트하는 새 메서드
 		private void UpdateCropLinesForMarker(double markerTime)
 		{

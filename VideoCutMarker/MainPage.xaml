@@ -95,7 +95,7 @@
 		<Grid 
 			Grid.Row="0" x:Name="markingOverlay"
 			HorizontalOptions="FillAndExpand"
-			VerticalOptions="End"
+			VerticalOptions="FillAndExpand"
 			Padding="5,0,5,0"
 			BackgroundColor="Transparent" />
 
