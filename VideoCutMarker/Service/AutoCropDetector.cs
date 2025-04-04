@@ -7,7 +7,7 @@ using CommunityToolkit.Maui.Views;
 using System.Diagnostics;
 using System.Numerics;
 
-namespace VideoCutMarker
+namespace VideoCutMarker.Services
 {
 	public class AutoCropDetector
 	{
@@ -62,7 +62,6 @@ namespace VideoCutMarker
 			}
 		}
 
-
 		private List<double> GetSamplePoints(double duration, int count)
 		{
 			List<double> points = new List<double>();
@@ -75,7 +74,6 @@ namespace VideoCutMarker
 
 			return points;
 		}
-
 
 		private Rect CalculateMedianBorders(List<(int Left, int Bottom, int Right, int Top)> detectedBorders, int width, int height)
 		{
